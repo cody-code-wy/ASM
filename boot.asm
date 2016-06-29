@@ -2,7 +2,6 @@
 ; Simple boot sector w/ teletype mode
 ;
 
-mov ah, 0x0e ; tell the bios we want scrolling teletype mode
 
 mov bp, 0x8000 ; Set the stack (just below the our bootsector)
 mov sp, bp ; Set the stack pointer to the beginnig of the stack
@@ -14,31 +13,38 @@ push 30 ; Load some data to run, why not
 check: ;needs a label so we can loop
   pop bx ; Get something to check
   cmp bx, 20 ; Check it against 20
-  je equal
-  jl less
-  jg greater
+  je check_equal
+  jl check_less
+  jg check_greater
 
-mov al, 'E' ;I dont think this can happen, but anyways...
-jmp print
+jmp check_end ; No print needed, we can just go to the end for unmatched things
 
-equal:
+check_equal:
   mov al, '='
-  jmp print
+  call print ; Call print, this allows us to return
+  jmp check_end
 
-less:
+check_less:
   mov al, '<'
-  jmp print
+  call print
+  jmp check_end
 
-greater:
+check_greater:
   mov al, '>'
-  jmp print
+  call print
+  jmp check_end
 
-; Just to prove the way the stack works...
+check_end: ; We need an end now, so our loop code does not go in the print function
+  cmp sp, bp
+  je loop ; When we poped everytihng go and loop forever.
+  jne check
+
 print:
+  pusha ;Save all registers, now we can do anything we want!
+  mov ah, 0x0e ; tell the bios we want scrolling teletype mode
   int 0x10
-  cmp sp, bp ; So keep looping until the stack poninter point to the base of the stack
-  je loop ; This is what happens when the stack pointer is at the base of the stack
-  jg check ; This happens if the pointer is not at the base of the stack
+  popa ;Pull all registers back.
+  ret ;Return to where this was called
 
 loop:
   jmp $ ; Infinite loop; $ means this line, so this means 'loop to this line'
